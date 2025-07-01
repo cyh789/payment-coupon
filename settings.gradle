@@ -1,3 +1,4 @@
 rootProject.name = 'payment'
 
 include 'api'
+include 'consumer'
