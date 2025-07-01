@@ -59,6 +59,36 @@ class ApplyServiceTest {
         assertThat(count).isEqualTo(100L);
     }
 
+
+
+    @Test
+    public void 한명당_한개의쿠폰만_발급() throws InterruptedException {
+        applyService.flushAll();
+
+        int threadCount = 1000;
+        ExecutorService executorService = Executors.newFixedThreadPool(32);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
+        for (int i = 0; i < threadCount; i++) {
+            //userId 고정
+            long userId = 1L;
+            executorService.submit(() -> {
+                try {
+                    applyService.apply(userId);
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+
+        //10초
+        Thread.sleep(10000);
+
+        long count = couponRepository.count();
+        assertThat(count).isEqualTo(1L);
+    }
+
     //Consumer 실행
     //docker exec -it kafka kafka-console-consumer.sh --topic coupon_create --bootstrap-server localhost:9092 --key-deserializer "org.apache.kafka.common.serialization.StringDeserializer" --value-deserializer "org.apache.kafka.common.serialization.LongDeserializer"
 
