@@ -3,8 +3,11 @@ package com.coupon.cafekiosk.service;
 import com.coupon.cafekiosk.controller.OrderCreateRequest;
 import com.coupon.cafekiosk.domain.Product;
 import com.coupon.cafekiosk.domain.ProductType;
+import com.coupon.cafekiosk.repository.OrderProductRepository;
+import com.coupon.cafekiosk.repository.OrderRepository;
 import com.coupon.cafekiosk.repository.ProductRepository;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +27,20 @@ class OrderServiceTest {
     private OrderService orderService;
 
     @Autowired
+    private OrderRepository orderRepository;
+
+    @Autowired
+    private OrderProductRepository orderProductRepository;
+
+    @Autowired
     private ProductRepository productRepository;
+
+    @AfterEach
+    void tearDown() {
+        orderProductRepository.deleteAllInBatch();
+        productRepository.deleteAllInBatch();
+        orderRepository.deleteAllInBatch();
+    }
 
     @Test
     @DisplayName("주문 번호 리스트를 받아 주문을 생성한다.")
@@ -56,6 +72,39 @@ class OrderServiceTest {
                 .containsExactlyInAnyOrder(
                         tuple("004", 1000),
                         tuple("005", 3000)
+                );
+    }
+
+    @Test
+    @DisplayName("주문 번호 리스트를 받아 주문을 생성한다. 주문 번호가 중복인 경우, 다건 조회 및 금액 합계를 응답한다.")
+    void createOrder2() {
+        // given
+        LocalDateTime registeredDateTime = LocalDateTime.now();
+
+        Product product1 = createProduct(HANDMADE, "004", 1000);
+        Product product2 = createProduct(HANDMADE, "005", 3000);
+        Product product3 = createProduct(HANDMADE, "006", 5000);
+
+        productRepository.saveAll(List.of(product1, product2, product3));
+
+        OrderCreateRequest request = OrderCreateRequest.builder()
+                .productNumbers(List.of("004", "004"))
+                .build();
+
+        // when
+        OrderResponse orderResponse = orderService.createOrder(request, registeredDateTime);
+
+        // then
+        assertThat(orderResponse.getId()).isNotNull();
+        assertThat(orderResponse)
+                .extracting("registeredDateTime", "totalPrice")
+                .contains(registeredDateTime, 2000);
+
+        assertThat(orderResponse.getProducts()).hasSize(2)
+                .extracting("productNumber", "price")
+                .containsExactlyInAnyOrder(
+                        tuple("004", 1000),
+                        tuple("004", 1000)
                 );
     }
 
