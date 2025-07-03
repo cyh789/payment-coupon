@@ -29,15 +29,34 @@ public class Order extends BaseEntity {
     private List<OrderProduct> orderProducts = new ArrayList<>();
 
     public Order(List<Product> products, LocalDateTime registeredDateTime) {
-        this.orderStatus = orderStatus;
-        this.totalPrice = calculateTotalPrice(totalPrice);
+        this.orderStatus = OrderStatus.INIT;
+        this.totalPrice = calculateTotalPrice(products);
         this.registeredDateTime = registeredDateTime;
         this.orderProducts = products.stream()
                 .map(product -> new OrderProduct(this, product))
                 .collect(Collectors.toList());
     }
 
-    private int calculateTotalPrice(int totalPrice) {
-        return totalPrice;
+    public Order(List<Product> products) {
+        this.orderStatus = OrderStatus.INIT;
+        this.totalPrice = calculateTotalPrice(products);
+        this.registeredDateTime = LocalDateTime.now();
+        this.orderProducts = products.stream()
+                .map(product -> new OrderProduct(this, product))
+                .collect(Collectors.toList());
+    }
+
+    public static Order create(List<Product> products) {
+        return new Order(products);
+    }
+
+    public static Order create(List<Product> products, LocalDateTime registeredDateTme) {
+        return new Order(products, registeredDateTme);
+    }
+
+    private static int calculateTotalPrice(List<Product> products) {
+        return products.stream()
+                .mapToInt(Product::getPrice)
+                .sum();
     }
 }
